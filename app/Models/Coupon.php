@@ -16,6 +16,15 @@ class Coupon extends Model
     // protected $casts = [
 
     // ];
+    public $incrementing = false; // Disable Laravel's default auto-increment behavior
+
+    // protected $fillable = ['id', 'name']; // Define fillable fields
+
+    // Define a mutator to generate the custom 8-digit ID
+    public function setIdAttribute($value)
+    {
+        $this->attributes['id'] = str_pad($value, 8, '0', STR_PAD_LEFT); // Pad with leading zeros
+    }
     public function user(){
         return $this->belongsTo(User::class);
     }

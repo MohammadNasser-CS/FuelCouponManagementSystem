@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('coupons', function (Blueprint $table) {
-            $table->bigInteger('id')->unique()->primary();
+            $table->increments('id')->unsigned()->length(8);
             $table->enum('vehicle_number', ['45958515', '45958514', '45958513']);
             $table->dateTime('filling_datetime')->default(now());
             $table->float('Car_currently_tank')->nullable();

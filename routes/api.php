@@ -29,7 +29,8 @@ Route::middleware('driver')->group(function () {
 });
 Route::middleware('employee')->group(function () {
     Route::post('/createCoupon', [CouponsController::class, 'createCoupon']);
-    Route::post('/exportPDF/{id}', [CouponsController::class, 'exportPDF']);
+    Route::post('/exportPDF', [CouponsController::class, 'exportPDF']);
+    Route::apiResource('coupon', CouponsController::class)->except(['store', 'index']);
 });
 
 Route::group([

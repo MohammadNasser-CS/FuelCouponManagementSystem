@@ -27,7 +27,6 @@ return new class extends Migration
             $table->enum('status', ['paid', 'unpaid', 'cancelled'])->default('unpaid');
             $table->string('Reigon')->nullable();
             $table->string('City')->nullable();
-
             $table->foreign('Employee_id')->references('id')->on('users');
             $table->foreign('driver_id')->references('id')->on('users')->onDelete('set null');
             $table->timestamps();

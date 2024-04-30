@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Coupon;
+use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -11,6 +13,9 @@ class CouponsController extends Controller
 {
     public function createCoupon(Request $request)
     {
+        // $previousCoupon = Coupon::where('driver_id',  $request->input('driver_id'))
+        //     ->where('status',  'unpaid')
+        //     ->first();
         $couponData = $request->all();
         $couponData['Employee_id'] = auth()->user()->id;
         $coupons = Coupon::create($couponData);
@@ -18,28 +23,71 @@ class CouponsController extends Controller
             'newCoupon' => $coupons,
         ]);
     }
-    public function exportPDF(Request $request, $coupon_id)
+    public function show($driver_id)
     {
-        $coupon = Coupon::findOrFail($coupon_id);
-        $pdf = Pdf::loadHTML($this->generatePdfHtml($coupon))
-            ->setPaper('a4', 'portrait');
-
-        // Generate a temporary file path to store the PDF
-        // $pdfPath = tempnam(sys_get_temp_dir(), 'users');
-        // Save the PDF to the temporary file path
-        $pdfFileName = $request->input('PdfName');
-        $pdf->save('Pdfs/' . $pdfFileName . '.pdf', 'public');
-
-        // Create a response to download the PDF file
-        $response = new BinaryFileResponse('storage/Pdfs/' . $pdfFileName . '.pdf');
-
-        // Set the appropriate headers for downloading the PDF file
-        $response->setContentDisposition('attachment', $pdfFileName . '.pdf');
-
-        // Return the response
-        return $response;
+        $coupons = Coupon::where('driver_id', $driver_id)->get(['id', 'driver_id', 'Employee_id', 'vehicle_number']);
+        return response()->json([
+            'coupons' => $coupons,
+        ]);
     }
-    private function generatePdfHtml($coupon)
+    public function update(Request $request, $coupon_id)
+    {
+        try {
+            $coupon = Coupon::findOrFail($coupon_id);
+            if ($coupon) {
+                $coupon->update($request->all());
+                return response()->json([
+                    'message' => 'Coupon Status Change successfully',
+                    'new Coupon' => $coupon,
+                ], 200);
+            }
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'Coupon Not Found',
+            ], 404);
+        }
+    }
+    public function destroy($coupon_id)
+    {
+        try {
+            $coupon = Coupon::findOrFail($coupon_id);
+            if ($coupon) {
+                $coupon->delete();
+                return response()->json([
+                    'message' => 'Coupon Deleted successfully',
+                ]);
+            }
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'Coupon Not Found',
+            ], 404);
+        }
+    }
+    public function exportPDF(Request $request)
+    {
+        try {
+            $coupon = Coupon::findOrFail($request->input('id'));
+            $driver = User::where('id', $coupon->driver_id)->first();
+            $pdf = Pdf::loadHTML($this->generatePdfHtml($coupon, $driver))
+                ->setPaper('a5', 'landscape');
+            // Generate a temporary file path to store the PDF
+            $pdf->save('Pdfs/' . $driver->name . '.pdf', 'public');
+
+            // Create a response to download the PDF file
+            $response = new BinaryFileResponse('storage/Pdfs/' . $driver->name . '.pdf');
+
+            // Set the appropriate headers for downloading the PDF file
+            $response->setContentDisposition('attachment', $driver->name . '.pdf');
+
+            // Return the response
+            return $response;
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'message' => $e,
+            ], 404);
+        }
+    }
+    private function generatePdfHtml($coupon, $driver)
     {
         // Generate HTML content for the PDF
         $html = '
@@ -82,15 +130,15 @@ class CouponsController extends Controller
         <div style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse; overflow-wrap: break-word;">
                 <tr style="background-color: #333; color: #fff;">
-                    <th style="padding: 10px;">Driver ID</th>
-                    <th style="padding: 10px;">Employee ID</th>
+                    <th style="padding: 10px;">Driver Name</th>
+                    <th style="padding: 10px;">Employee Name</th>
                     <th style="padding: 10px;">Fuel Station Name</th>
                     <th style="padding: 10px;">Region</th>
                     <th style="padding: 10px;">City</th>
                 </tr>
                 <tr>
-                    <td style="padding: 10px;">' . $coupon->driver_id . '</td>
-                    <td style="padding: 10px;">' . $coupon->Employee_id . '</td>
+                    <td style="padding: 10px;">' . $driver->name  . '</td>
+                    <td style="padding: 10px;">' . auth()->user()->name . '</td>
                     <td style="padding: 10px;">' . $coupon->Fuel_station_name . '</td>
                     <td style="padding: 10px;">' . $coupon->Region . '</td>
                     <td style="padding: 10px;">' . $coupon->City . '</td>
